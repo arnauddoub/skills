@@ -1,12 +1,12 @@
 ---
 name: wt-review
-description: Review a PR or branch in an isolated git worktree, in an iTerm2 split pane running /code-review. Invoked as /wt-review <branch | #PR | ABC-XXXX> [base]. Also use when the user asks to review a PR or branch in a worktree.
+description: Review a PR or branch in an isolated git worktree, in an iTerm2 split pane running /my-review. Invoked as /wt-review <branch | #PR | ABC-XXXX> [base]. Also use when the user asks to review a PR or branch in a worktree.
 argument-hint: <branche | #PR | ABC-XXXX> [base]
 ---
 
 # /wt-review
 
-Opens the branch in a disposable worktree and launches `/code-review` in an iTerm2 split pane. The main checkout is never touched. Default review base: `origin/main` (second argument overrides, e.g. stacked PRs).
+Opens the branch in a disposable worktree and launches `/my-review` in an iTerm2 split pane. The main checkout is never touched. Default review base: `origin/main` (second argument overrides, e.g. stacked PRs).
 
 Helper scripts (allowlisted — always invoke them instead of raw osascript/cp/ln):
 - `~/.claude/scripts/wt-pane.sh <dir> <name> [claude args...] [--horizontal]`
@@ -23,5 +23,5 @@ Rules: literal absolute paths everywhere; `git -C <path>`, never `cd && git`.
    - Worktree already exists (re-review) → `git -C <worktree> pull --ff-only` instead; on divergence (force-push), warn and propose `git -C <worktree> reset --hard origin/<BRANCH>` (disposable, but say so first).
    - Branch checked out in another non-review worktree → tell the user where; don't force.
 5. `wt-setup.sh <root> <worktree>`
-6. `wt-pane.sh '<worktree>' '<SLUG>' '/code-review <BASE>'`
+6. `wt-pane.sh '<worktree>' '<SLUG>' '/my-review <BASE>'`
 7. Confirm: branch, base, pane open. The worktree is disposable — suggest `/wt-clean <SLUG>` once the review is done.

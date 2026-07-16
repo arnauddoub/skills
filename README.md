@@ -10,12 +10,13 @@ Claude Code skills for a frictionless git worktree workflow on macOS + iTerm2: e
 | `/wt-review <branch \| #PR \| TICKET> [base]` | Check out a PR/branch in a disposable worktree and auto-launch a code review against `origin/main` (or a custom base for stacked PRs). Re-running updates the branch and opens a fresh review. |
 | `/wt-list` | Readable list of worktrees: branch, dirty state, orphaned locks, merged status. |
 | `/wt-clean [name]` | Safe removal. Without arguments, sweeps: auto-removes only trivially safe worktrees (clean + no local-only commits + no running session), asks before touching anything with real work in it. |
+| `/my-review [fixed-point]` | Two-axis code review (Standards + Spec, via [mattpocock/skills](https://github.com/mattpocock/skills)' `code-review`) reported as a verdict-first summary grouped by severity. This is what `/wt-review` launches in its pane. |
 
 Each pane gets the worktree name as its title (`claude -n`) and as an iTerm2 **badge** — the watermark survives Claude Code's dynamic titles, so you always know which pane is which worktree.
 
 ## Layout
 
-- `skills/` — the four skills; copy each directory into `~/.claude/skills/`
+- `skills/` — the skills; copy each directory into `~/.claude/skills/`
 - `scripts/` — two helpers the skills call; copy into `~/.claude/scripts/` and `chmod +x` them
   - `wt-pane.sh <dir> <name> [claude args...] [--horizontal]` — iTerm2 split + badge + `claude -n <name>`
   - `wt-setup.sh <repo_root> <worktree>` — symlinks (`worktree.symlinkDirectories` from your project settings), copies `.claude/settings.local.json` (permission allowlist) and `.worktreeinclude` files into the worktree
@@ -24,7 +25,7 @@ Each pane gets the worktree name as its title (`claude -n`) and as an iTerm2 **b
 
 ```bash
 git clone https://github.com/arnauddoub/skills
-cp -R skills/skills/wt-* ~/.claude/skills/
+cp -R skills/skills/* ~/.claude/skills/
 mkdir -p ~/.claude/scripts && cp skills/scripts/wt-*.sh ~/.claude/scripts/ && chmod +x ~/.claude/scripts/wt-*.sh
 ```
 
@@ -58,6 +59,7 @@ Then add these permission rules to `~/.claude/settings.json` so the skills run w
 - macOS + [iTerm2](https://iterm2.com) (split panes via AppleScript — allow the automation prompt on first use)
 - [Claude Code](https://code.claude.com)
 - `jq`, `gh` (authenticated)
+- For `/my-review` (and thus `/wt-review`): the `code-review` skill from [mattpocock/skills](https://github.com/mattpocock/skills) installed at `~/.claude/skills/code-review/`
 
 ### Recommended per-project settings
 
