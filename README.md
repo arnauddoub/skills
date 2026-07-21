@@ -57,6 +57,7 @@ Then add these permission rules to `~/.claude/settings.json` so the skills run w
 ### Requirements
 
 - macOS + [iTerm2](https://iterm2.com) (split panes via AppleScript — allow the automation prompt on first use)
+- `zsh` at `/bin/zsh` (ships with macOS) — `wt-pane.sh` requires it: the `printf %q` of macOS's bash 3.2 mangles multibyte characters (accents, em-dashes) into invalid UTF-8 that AppleScript rejects with error -1700
 - [Claude Code](https://code.claude.com)
 - `jq`, `gh` (authenticated)
 - For `/my-review` (and thus `/wt-review`): the `code-review` skill from [mattpocock/skills](https://github.com/mattpocock/skills) installed at `~/.claude/skills/code-review/`

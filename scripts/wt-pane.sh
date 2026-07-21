@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/zsh
+# zsh required: bash 3.2's printf %q mangles multibyte characters (e.g. em-dash)
+# into invalid UTF-8, which osascript rejects with error -1700.
 # Open an iTerm2 split pane in <dir>, set its name + badge, start Claude Code there.
 # Usage: wt-pane.sh <dir> <name> [claude args...] [--horizontal]
 DIR="$1"; NAME="$2"; shift 2 || exit 1
