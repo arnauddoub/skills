@@ -23,5 +23,5 @@ Rules: literal absolute paths everywhere; `git -C <path>`, never `cd && git`.
    - Worktree already exists (re-review) → `git -C <worktree> pull --ff-only` instead; on divergence (force-push), warn and propose `git -C <worktree> reset --hard origin/<BRANCH>` (disposable, but say so first).
    - Branch checked out in another non-review worktree → tell the user where; don't force.
 5. `wt-setup.sh <root> <worktree>`
-6. `wt-pane.sh '<worktree>' '<SLUG>' --permission-mode acceptEdits '/my-review <BASE>'` — auto-accept mode is enough here (worktree is disposable, review is read-only); never use `--dangerously-skip-permissions`.
+6. `wt-pane.sh '<worktree>' '<SLUG>' --permission-mode auto '/my-review <BASE>'` — auto mode is enough here (worktree is disposable, review is read-only); never use `--dangerously-skip-permissions`.
 7. Confirm: branch, base, pane open. The worktree is disposable — suggest `/wt-clean <SLUG>` once the review is done.
