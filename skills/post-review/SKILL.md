@@ -15,9 +15,12 @@ itself — if there is no review in context, say so and stop.
 3. **No blocking points** → approve, bare: `gh pr review <number> --approve`, no `--body`, no
    comment. Non-blocking findings stay in the conversation. Done — skip the template.
 4. Otherwise write the body to a file in the scratchpad directory, in the **repo's** language — read
-   it off the PR title and the recent commit subjects, not off the conversation — and submit it with
-   the **Comment** action: `gh pr review <number> --comment --body-file <file>`. Then report the
-   PR's URL. Never `--request-changes`: a negative verdict belongs to a human.
+   it off the PR title and the recent commit subjects, not off the conversation.
+5. Re-read every quotation at its source and paste it from that read. Then, finding by finding, ask
+   whether the whole quote still carries the severity. It often doesn't: the clause that reverses it
+   is the one that got trimmed.
+6. Submit with the **Comment** action: `gh pr review <number> --comment --body-file <file>`, then
+   report the PR's URL. Never `--request-changes`: a negative verdict belongs to a human.
 
 ## Comment template
 
@@ -44,6 +47,9 @@ By Claude
 ## Rules
 
 - Post only findings verified against the code. A claim that could not be reproduced is dropped, never hedged.
+- A quote taken from conversation context is unverified. Re-read it at its `file:line` and paste it
+  from there, whole. Never trim a quote across a `but`, `unless`, `except` or any clause that
+  qualifies it — if the full sentence won't fit, cite the line and don't quote.
 - Every finding cites what it contradicts — an AC, a `docs/decisions` entry, an ADR, or the code's own comment. A finding with nothing to cite stays in the conversation.
 - `By Claude` is the last line, on its own. No other attribution, no generated-with trailer.
 - A review cannot be edited once submitted. Before posting a second one on the same PR, say what the
