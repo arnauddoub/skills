@@ -11,6 +11,7 @@ Claude Code skills for a frictionless git worktree workflow on macOS + iTerm2: e
 | `/wt-list` | Readable list of worktrees: branch, dirty state, orphaned locks, merged status. |
 | `/wt-clean [name]` | Safe removal. Without arguments, sweeps: auto-removes only trivially safe worktrees (clean + no local-only commits + no running session), asks before touching anything with real work in it. |
 | `/my-review [fixed-point]` | Two-axis code review (Standards + Spec, via [mattpocock/skills](https://github.com/mattpocock/skills)' `code-review`) reported as a verdict-first summary grouped by severity. This is what `/wt-review` launches in its pane. |
+| `/post-review [blocking\|all] [PR]` | Submit the findings of a review already in context as a GitHub review: bare **Approve** when nothing blocks, **Comment** otherwise (never request-changes), blocking points only by default. Cites what each finding contradicts; signs off as Claude. |
 
 Each pane gets the worktree name as its title (`claude -n`) and as an iTerm2 **badge** — the watermark survives Claude Code's dynamic titles, so you always know which pane is which worktree.
 
