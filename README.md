@@ -7,7 +7,7 @@ Claude Code skills for a frictionless git worktree workflow on macOS + iTerm2: e
 | Command | What it does |
 |---------|--------------|
 | `/wt-open <name> [task]` | Create a worktree (branch named per your repo's conventions, e.g. `fix/ABC-123`) and open a Claude session on it in a split pane. If the worktree already exists, **resumes its previous Claude session** with full history. |
-| `/wt-review <branch \| #PR \| TICKET> [base]` | Check out a PR/branch in a disposable worktree and auto-launch a code review against `origin/main` (or a custom base for stacked PRs). Re-running updates the branch and opens a fresh review. |
+| `/wt-review <branch \| #PR \| TICKET> [base]` | Check out a PR/branch in a disposable worktree and auto-launch a code review against the PR's own base (or a custom one). A PR on a stack is reviewed **layer by layer, bottom-up**, in one worktree and one session — only the layers you are a requested reviewer on, one verdict each. Re-running updates the branch and opens a fresh review. |
 | `/wt-project <project URL \| slug \| name>` | Open a **parent** session for a whole tracker project: reads the project and its issues, opens a `feat/<project>-requirements` worktree and a pane whose first prompt is the project brief. Scoping and breakdown happen there; each issue then gets its own `/wt-open` worktree. Re-running resumes the session. |
 | `/wt-list` | Readable list of worktrees: branch, dirty state, orphaned locks, merged status. |
 | `/wt-clean [name]` | Safe removal. Without arguments, sweeps: auto-removes only trivially safe worktrees (clean + no local-only commits + no running session), asks before touching anything with real work in it. |

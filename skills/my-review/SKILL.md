@@ -8,6 +8,7 @@ Wrapper around the `code-review` skill. Same process, different report.
 ## Process
 
 1. Read `~/.claude/skills/code-review/SKILL.md` and follow its steps 1–4 (fixed point, spec source, standards sources, parallel sub-agents). Skip its step 5 (Aggregate).
+   In step 1, keep generated files out of the diff the sub-agents read — lockfiles, ORM migration snapshots (`**/drizzle/meta/*_snapshot.json`), codegen output — with `:(exclude)` pathspecs. They are reviewed by regenerating them, not by reading them.
 2. Verify the sub-agent claims yourself. A finding has two halves — the **mechanism** (what the
    code does) and the **contradiction** (the rule, decision or comment it breaks) — and the
    severity comes only from the second. Check them separately, and check the contradiction by
