@@ -8,6 +8,7 @@ Claude Code skills for a frictionless git worktree workflow on macOS + iTerm2: e
 |---------|--------------|
 | `/wt-open <name> [task]` | Create a worktree (branch named per your repo's conventions, e.g. `fix/ABC-123`) and open a Claude session on it in a split pane. If the worktree already exists, **resumes its previous Claude session** with full history. |
 | `/wt-review <branch \| #PR \| TICKET> [base]` | Check out a PR/branch in a disposable worktree and auto-launch a code review against `origin/main` (or a custom base for stacked PRs). Re-running updates the branch and opens a fresh review. |
+| `/wt-project <project URL \| slug \| name>` | Open a **parent** session for a whole tracker project: reads the project and its issues, opens a `feat/<project>-requirements` worktree and a pane whose first prompt is the project brief. Scoping and breakdown happen there; each issue then gets its own `/wt-open` worktree. Re-running resumes the session. |
 | `/wt-list` | Readable list of worktrees: branch, dirty state, orphaned locks, merged status. |
 | `/wt-clean [name]` | Safe removal. Without arguments, sweeps: auto-removes only trivially safe worktrees (clean + no local-only commits + no running session), asks before touching anything with real work in it. |
 | `/my-review [fixed-point]` | Two-axis code review (Standards + Spec, via [mattpocock/skills](https://github.com/mattpocock/skills)' `code-review`) reported as a verdict-first summary grouped by severity. This is what `/wt-review` launches in its pane. |
@@ -19,7 +20,7 @@ Each pane gets the worktree name as its title (`claude -n`) and as an iTerm2 **b
 
 - `skills/` — the skills; copy each directory into `~/.claude/skills/`
 - `scripts/` — two helpers the skills call; copy into `~/.claude/scripts/` and `chmod +x` them
-  - `wt-pane.sh <dir> <name> [claude args...] [--horizontal]` — iTerm2 split + badge + `claude -n <name>`
+  - `wt-pane.sh <dir> <name> [claude args...] [--prompt-file <path>] [--horizontal]` — iTerm2 split + badge + `claude -n <name>`; `--prompt-file` carries an initial prompt longer than the TTY's 1024-byte typed-line limit
   - `wt-setup.sh <repo_root> <worktree>` — symlinks (`worktree.symlinkDirectories` from your project settings), copies `.claude/settings.local.json` (permission allowlist) and `.worktreeinclude` files into the worktree
 
 ## Install
@@ -61,6 +62,7 @@ Then add these permission rules to `~/.claude/settings.json` so the skills run w
 - `zsh` at `/bin/zsh` (ships with macOS) — `wt-pane.sh` requires it: the `printf %q` of macOS's bash 3.2 mangles multibyte characters (accents, em-dashes) into invalid UTF-8 that AppleScript rejects with error -1700
 - [Claude Code](https://code.claude.com)
 - `jq`, `gh` (authenticated)
+- For `/wt-project`: an issue-tracker MCP (Linear) whose project/issue read tools are allowed
 - For `/my-review` (and thus `/wt-review`): the `code-review` skill from [mattpocock/skills](https://github.com/mattpocock/skills) installed at `~/.claude/skills/code-review/`
 
 ### Recommended per-project settings
