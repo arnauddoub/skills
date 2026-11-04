@@ -52,6 +52,8 @@ By Claude
   qualifies it — if the full sentence won't fit, cite the line and don't quote.
 - Every finding cites what it contradicts — an AC, a `docs/decisions` entry, an ADR, or the code's own comment. A finding with nothing to cite stays in the conversation.
 - `By Claude` is the last line, on its own. No other attribution, no generated-with trailer.
-- A review cannot be edited once submitted. Before posting a second one on the same PR, say what the
-  previous review already covers and post only what is new.
+- A submitted review cannot be deleted (`422 non-pending`) or dismissed (`422 commented`), but its
+  body **is** editable: `gh api -X PUT /repos/<owner>/<repo>/pulls/<n>/reviews/<id> --input <json>`.
+  A review that turned out wrong is rewritten in place, not answered by a second one.
+- Post a second review only for findings the first does not carry, and say what it already covers.
 - Never touch PR state: no ready/draft switch, no reviewers, no resolving threads, no merge.
