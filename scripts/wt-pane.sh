@@ -1,23 +1,11 @@
 #!/bin/zsh
 # Rex pane in <dir>, beside this session, running `claude -n <name>` and labelled --label (default <name>).
-# wt-pane.sh --close <dir>: closes every pane whose program runs in <dir>, this one excepted.
+# wt-pane.sh --close <dir>: closes every pane whose program runs in <dir>, this one excepted. The Rex side is wt-pane.lua.
 # zsh, not bash: bash 3.2's printf %q turns multibyte text into invalid UTF-8.
 [ -n "$REX_SESSION" ] && command -v rex >/dev/null || { echo "wt-pane.sh: needs a Rex terminal (REX_SESSION unset)" >&2; exit 1; }
-S=(-s "$REX_SESSION")
-# id<TAB>label<TAB>program<TAB>cwd of every pane of the session.
-panes() {
-  rex block ls "${S[@]}" --json | jq -r '.blocks[] | "\(.block_id)\t\(.label // "")"' | while IFS=$'\t' read -r id label; do
-    rex block call "${S[@]}" -b "$id" process 2>/dev/null |
-      jq -r --arg id "$id" --arg l "$label" '"\($id)\t\($l)\t\(.foreground.argv0 // "" | sub(".*/"; "") | ltrimstr("-"))\t\(.foreground.cwd // .child.cwd // "")"'
-  done
-}
+LUA="${0:A:h}/wt-pane.lua"
 if [ "$1" = "--close" ]; then
-  DIR="${2%/}"; DIR="${DIR:A}"
-  panes | while IFS=$'\t' read -r id label prog cwd; do
-    [ "$id" = "$REX_BLOCK" ] && continue
-    case "$cwd" in "$DIR"|"$DIR"/*) rex block close "${S[@]}" "$id" >/dev/null && echo "closed $label ($id)" ;; esac
-  done
-  exit 0
+  D="${2%/}"; exec rex do "$LUA" close="${D:A}"
 fi
 DIR="${1%/}"; NAME="$2"; shift 2 || exit 1
 [ -d "$DIR" ] || { echo "usage: wt-pane.sh <dir> <name> [claude args...] [--label <text>] [--prompt-file <path>] [--tint <#RRGGBB>] [--horizontal] | wt-pane.sh --close <dir>" >&2; exit 1; }
@@ -45,11 +33,5 @@ for p in $(ps -axo pid=,comm= | awk '$2=="claude"{print $1}'); do
     "$DIR"|"$DIR"/*) echo "wt-pane.sh: a Claude session already runs in $DIR (pid $p) — quit it before opening another" >&2; exit 1 ;;
   esac
 done
-# A pane left with a bare shell in the worktree is the stale one; its dev pane (<slug>-dev) is not.
-panes | while IFS=$'\t' read -r id label prog cwd; do
-  [ "$cwd" = "$DIR" ] && [[ "$prog" == (zsh|bash|sh) ]] && [[ "$label" != *-dev ]] &&
-    rex block close "${S[@]}" "$id" >/dev/null && echo "closed stale pane $label ($id)"
-done
 [ "$SPLIT" = "horizontally" ] && WHERE=below || WHERE=right
-exec rex split "${S[@]}" ${REX_BLOCK:+-b "$REX_BLOCK"} --split "$WHERE" --cwd "$DIR" --label "$LABEL" \
-  --shell=none -- zsh -lic "$CMD; exec zsh -l"
+exec rex do "$LUA" dir="$DIR" label="$LABEL" split="$WHERE" cmd="$CMD"

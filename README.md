@@ -20,7 +20,7 @@ Each pane is labelled with what it works on — `PRO-1787 · Transplant specific
 
 - `skills/` — the skills; copy each directory into `~/.claude/skills/`
 - `scripts/` — helpers the skills call; copy into `~/.claude/scripts/` and `chmod +x` them
-  - `wt-pane.sh <dir> <name> [claude args...] [--label <text>] [--prompt-file <path>] [--tint <#RRGGBB>] [--horizontal]` — Rex pane running `claude -n <name>`, labelled `--label`; `--prompt-file` carries a long initial prompt. Refuses a second session on a worktree whose `claude` still runs, and replaces a stale pane left in it. `wt-pane.sh --close <dir>` closes every pane running in a worktree
+  - `wt-pane.sh <dir> <name> [claude args...] [--label <text>] [--prompt-file <path>] [--tint <#RRGGBB>] [--horizontal]` — Rex pane running `claude -n <name>`, labelled `--label`; `--prompt-file` carries a long initial prompt. Refuses a second session on a worktree whose `claude` still runs, and replaces a stale pane left in it. `wt-pane.sh --close <dir>` closes every pane running in a worktree; the Rex side (listing, closing and splitting panes) is `wt-pane.lua`, run with `rex do` over one server connection
   - `wt-setup.sh <repo_root> <worktree>` — symlinks (`worktree.symlinkDirectories` from your project settings), copies `.claude/settings.local.json` (permission allowlist) and `.worktreeinclude` files into the worktree
   - `wt-dev.sh <worktree> <slug> -- <command…>` / `wt-dev.sh --stop <slug>` — the dev pane of `/wt-dev`
   - `review-board.ts` — `bun review-board.ts --repo <checkout>`: PRs where you are a requested reviewer (Enter sends `/wt-review <n>` to the Claude session running in that checkout) and, below them, your own open PRs by review state
