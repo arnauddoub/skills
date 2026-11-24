@@ -1,0 +1,4 @@
+{
+  "mode": "allow_full",
+  "programs": ["nvim", "vim", "vi", "nano", "less", "man", "htop", "btop", "top", "watch", "lazygit", "tig", "k9s", "ssh", "rex", "bun"]
+}
