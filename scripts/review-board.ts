@@ -24,6 +24,7 @@ type Pr = {
   decision: string | null
   waiting: string[]
   approvedBy: string[]
+  changesBy: string[]
 }
 
 const FIELDS = `nodes { ... on PullRequest {
@@ -55,6 +56,7 @@ const toPr = (n: any): Pr => ({
   decision: n.reviewDecision,
   waiting: n.reviewRequests.nodes.map((r: any) => r.requestedReviewer?.login ?? r.requestedReviewer?.slug).filter(Boolean),
   approvedBy: n.latestReviews.nodes.filter((r: any) => r.state === 'APPROVED').map((r: any) => r.author?.login).filter(Boolean),
+  changesBy: n.latestReviews.nodes.filter((r: any) => r.state === 'CHANGES_REQUESTED').map((r: any) => r.author?.login).filter(Boolean),
 })
 
 const fetchAll = async () => {
@@ -108,10 +110,14 @@ const TABS = [
     groups: (list: Pr[]): Group[] => {
       const waiting = (p: Pr) => (p.waiting.length ? `waiting for ${p.waiting.join(', ')}` : 'no reviewer requested')
       const approved = (p: Pr) => (p.approvedBy.length ? `approved by ${p.approvedBy.join(', ')}` : '')
+      // reviewDecision stays null when the ruleset asks for no approval: read the reviews themselves.
+      const changes = (p: Pr) => p.decision === 'CHANGES_REQUESTED' || p.changesBy.length > 0
+      const ok = (p: Pr) => !changes(p) && (p.decision === 'APPROVED' || p.approvedBy.length > 0)
+      const ready = list.filter((p) => !p.draft)
       return [
-        { title: 'Waiting for reviewers', color: c.orange, prs: list.filter((p) => !p.draft && !p.decision?.match(/APPROVED|CHANGES_REQUESTED/)), who: () => '', sub: waiting },
-        { title: 'Changes requested', color: c.red, prs: list.filter((p) => !p.draft && p.decision === 'CHANGES_REQUESTED'), who: () => '', sub: waiting },
-        { title: 'Approved', color: c.green, prs: list.filter((p) => !p.draft && p.decision === 'APPROVED'), who: () => '', sub: approved },
+        { title: 'Waiting for reviewers', color: c.orange, prs: ready.filter((p) => !changes(p) && !ok(p)), who: () => '', sub: waiting },
+        { title: 'Changes requested', color: c.red, prs: ready.filter(changes), who: () => '', sub: (p) => (p.changesBy.length ? `changes requested by ${p.changesBy.join(', ')}` : waiting(p)) },
+        { title: 'Approved', color: c.green, prs: ready.filter(ok), who: () => '', sub: approved },
         { title: 'Drafts', color: c.blue, prs: list.filter((p) => p.draft), who: () => '', sub: () => '' },
       ]
     },
