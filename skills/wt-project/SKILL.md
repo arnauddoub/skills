@@ -20,12 +20,12 @@ Rules: literal absolute paths everywhere; `git -C <path>`, never `cd && git`. Re
 
 1. **Resolve the project**: Linear → `get_project` (with milestones and resources) on the URL slug or the name, then `list_issues` on the project (title, status, assignee, labels, priority, parent). Ask if several projects match.
 2. **Branch name**: `feat/<project-slug>-requirements`, where `<project-slug>` is the tracker's slug without its trailing id (`my-project-ae91a2ba624e` → `my-project`). The repo's ticket-based branch convention does not apply: a project has no ticket. `<SLUG>` = branch with `/` → `-`.
-3. **Worktree `<SLUG>` already exists** (`git -C <root> worktree list`) → resume it: `wt-pane.sh '<worktree>' '<SLUG>' --label '<LABEL>' --tint '#172641' --continue`. Tell the user their previous session resumes with full history. No session to resume → rerun without `--continue`.
+3. **Worktree `<SLUG>` already exists** (`git -C <root> worktree list`) → resume it: `wt-pane.sh '<worktree>' '<SLUG>' --label '<LABEL>' --tint '#172641' --model fable --continue`. Tell the user their previous session resumes with full history. No session to resume → rerun without `--continue`.
 4. **Create**:
    - Branch already exists on origin (`git -C <root> fetch origin` then `git -C <root> branch -r --list 'origin/<BRANCH>'` non-empty) → `git -C <root> worktree add <root>/.claude/worktrees/<SLUG> '<BRANCH>'`
    - New project → `git -C <root> fetch origin && git -C <root> worktree add <root>/.claude/worktrees/<SLUG> -b <BRANCH> origin/main`
 5. `wt-setup.sh <root> <worktree>`
-6. **Write the brief** to `~/.claude/briefs/<SLUG>.md` (`mkdir -p` it), then `wt-pane.sh '<worktree>' '<SLUG>' --label '<LABEL>' --tint '#172641' --prompt-file ~/.claude/briefs/<SLUG>.md`. Never pass the brief as a plain argument: a multi-line prompt does not survive the shell quoting. The brief is the session's initial prompt, written in the conversation language. It carries:
+6. **Write the brief** to `~/.claude/briefs/<SLUG>.md` (`mkdir -p` it), then `wt-pane.sh '<worktree>' '<SLUG>' --label '<LABEL>' --tint '#172641' --model fable --prompt-file ~/.claude/briefs/<SLUG>.md`. Never pass the brief as a plain argument: a multi-line prompt does not survive the shell quoting. The brief is the session's initial prompt, written in the conversation language. It carries:
    - the project: name, identifier, URL, lead, priority, start and target dates, labels
    - the issues, numbered as the project orders them (title prefix, milestone, else creation order): `ID — title [status]`, with their parent/child structure
    - the role: scoping and breakdown first — read the issues, the existing code they touch and the relevant decision records, then propose a plan and wait for the user's agreement before any code; each issue is then worked in its own worktree via `/wt-open`, carrying the decisions taken here; never create tickets or commits without an explicit request
