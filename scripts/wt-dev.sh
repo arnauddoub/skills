@@ -2,7 +2,9 @@
 # Run a worktree's dev stack in a pane labelled <slug>-dev, in the Rex window "Stacks", without taking focus.
 # Usage: wt-dev.sh <dir> <slug> -- <command...>   |   wt-dev.sh --stop <slug>
 usage() { echo "usage: wt-dev.sh <dir> <slug> -- <command...> | wt-dev.sh --stop <slug>" >&2; exit 1; }
-[ -n "$REX_SESSION" ] && command -v rex >/dev/null || { echo "wt-dev.sh: needs a Rex terminal (REX_SESSION unset)" >&2; exit 1; }
+# A pane rex-resume brings back after a restart has REX_BLOCK but no REX_SESSION: ask Rex which session holds it.
+[ -n "$REX_SESSION" ] || export REX_SESSION="$(rex whoami --json 2>/dev/null | jq -r '.session_id // empty')"
+[ -n "$REX_SESSION" ] && command -v rex >/dev/null || { echo "wt-dev.sh: needs a Rex terminal (no Rex session found)" >&2; exit 1; }
 S=(-s "$REX_SESSION")
 blocks() { rex block ls "${S[@]}" --json | jq -r --arg l "$1" '.blocks[] | select(.label == $l) | .block_id'; }
 

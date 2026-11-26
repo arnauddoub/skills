@@ -24,10 +24,11 @@ Each pane is labelled with what it works on — `PRO-1787 · Transplant specific
   - `wt-setup.sh <repo_root> <worktree>` — symlinks (`worktree.symlinkDirectories` from your project settings), copies `.claude/settings.local.json` (permission allowlist) and `.worktreeinclude` files into the worktree
   - `wt-dev.sh <worktree> <slug> -- <command…>` / `wt-dev.sh --stop <slug>` — the dev pane of `/wt-dev`
   - `review-board.ts` — `bun review-board.ts --repo <checkout>`: PRs where you are a requested reviewer (Enter sends `/wt-review <n>` to the Claude session running in that checkout) and, below them, your own open PRs by review state
+  - `memory-board.ts` — `bun memory-board.ts`: the Mac's memory pressure, swap in use, and the apps holding the most, each counted with all its processes
   - `usage-board.ts` — `bun usage-board.ts`: the account's 5-hour and 7-day limits, then each live Claude session's model, context and cost. Reads `~/.claude/state/statusline/<session>.json`, which your status line script must write (`printf '%s' "$input" > ~/.claude/state/statusline/<session_id>.json`)
   - `pull-main.lua` — `rex do pull-main.lua repo=<path> [minutes=180]`: fast-forwards that checkout's `main` to `origin/main` at that interval, in the pane it runs in. Never merges or resets; skipped when the checkout is not on `main`
 - `rex/` — Rex configuration, linked into `~/.config/rex/`
-  - `init.lua` — `⇧⌘L` opens the pane's Linear ticket (a project pane lists the project's open tickets), `⇧⌘G` its pull requests, bottom-up for a stack; loads rex-resume. Reads a Linear API key from the keychain (`security add-generic-password -a "$USER" -s linear-api -w`), never from a file
+  - `init.lua` — `⇧⌘=` evens the panes out, the boards (Reviews, Memory, Usage) at about half a column; `⇧⌘L` opens the pane's Linear ticket (a project pane lists the project's open tickets), `⇧⌘G` its pull requests, bottom-up for a stack; loads rex-resume. Reads a Linear API key from the keychain (`security add-generic-password -a "$USER" -s linear-api -w`), never from a file
   - `rex-resume-settings.json` — the programs [rex-resume](https://github.com/evgeny-golubev/rex-extensions) brings back after a restart; link it to `~/.config/rex/extensions/rex-resume/settings.json`
 - `claude/statusline.sh` — Claude Code status line (folder, branch, model, context), which also saves its input to `~/.claude/state/statusline/` for `usage-board.ts`; link it to `~/.claude/statusline.sh`
 
@@ -39,19 +40,12 @@ cp -R skills/skills/* ~/.claude/skills/
 mkdir -p ~/.claude/scripts && cp skills/scripts/* ~/.claude/scripts/ && chmod +x ~/.claude/scripts/wt-*.sh
 ```
 
-Then add these permission rules to `~/.claude/settings.json` so the skills run without confirmation prompts (replace `/Users/you` with your actual home directory — rules don't expand `~`):
+Run Claude Code in auto mode (`"permissions": { "defaultMode": "auto" }`): it approves the skills' `git -C <path> …` commands on its own. Then add these permission rules to `~/.claude/settings.json` for the rest (replace `/Users/you` with your actual home directory — rules don't expand `~`):
 
 ```json
 {
   "permissions": {
     "allow": [
-      "Bash(git -C * worktree *)",
-      "Bash(git -C * status *)",
-      "Bash(git -C * branch *)",
-      "Bash(git -C * fetch *)",
-      "Bash(git -C * pull --ff-only*)",
-      "Bash(git -C * log *)",
-      "Bash(git -C * rev-parse *)",
       "Bash(git rev-parse *)",
       "Bash(gh pr view *)",
       "Bash(gh pr list *)",
@@ -65,6 +59,8 @@ Then add these permission rules to `~/.claude/settings.json` so the skills run w
   }
 }
 ```
+
+Don't allow `Bash(git -C * …)`: a wildcard before the subcommand also accepts options slipped in there, and `git -c` can run any command.
 
 ### Requirements
 

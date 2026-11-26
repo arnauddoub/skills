@@ -19,8 +19,8 @@ const tone = (pct: number) => (pct >= 80 ? c.red : pct >= 50 ? c.yellow : c.gree
 
 function box(title: string, color: string, count: string, lines: string[], width: number) {
   const inner = width - 4
-  const head = `${color}┌ ${c.bold}${title}${c.reset}${color} ${'─'.repeat(Math.max(1, width - visible(title) - visible(count) - 6))} ${c.reset}${count}${color} ┐${c.reset}`
-  const body = lines.map((l) => `${color}│${c.reset} ${pad(l, inner)} ${color}│${c.reset}`)
+  const head = `${color}┌ ${c.bold}${title}${c.reset}${color} ${count ? `${'─'.repeat(Math.max(1, width - visible(title) - visible(count) - 6))} ${c.reset}${count}${color} ` : '─'.repeat(Math.max(1, width - visible(title) - 4))}┐${c.reset}`
+  const body = lines.map((l) => `${color}│${c.reset} ${l}${' '.repeat(Math.max(0, inner - visible(l)))} ${color}│${c.reset}`)
   return [head, ...body, `${color}└${'─'.repeat(width - 2)}┘${c.reset}`]
 }
 
@@ -38,7 +38,7 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const resetAt = (epoch: number) => {
   const d = new Date(epoch * 1000)
   const time = d.toTimeString().slice(0, 5)
-  return d.toDateString() === new Date().toDateString() ? `at ${time}` : `${DAYS[d.getDay()]} ${time}`
+  return d.toDateString() === new Date().toDateString() ? time : `${DAYS[d.getDay()]} ${time}`
 }
 
 const json = (path: string) => {
@@ -67,10 +67,10 @@ const run = async (cmd: string[]) => {
 // pid -> Rex pane label, for the panes whose foreground program is a Claude session.
 async function labels() {
   const out = new Map<number, string>()
-  if (!SESSION) return out
-  const blocks = JSON.parse((await run(['rex', 'block', 'ls', '-s', SESSION, '--json'])) || '{"blocks":[]}').blocks
+  const s = SESSION ? ['-s', SESSION] : []
+  const blocks = JSON.parse((await run(['rex', 'block', 'ls', ...s, '--json'])) || '{"blocks":[]}').blocks
   await Promise.all(blocks.map(async (b: { block_id: string; label?: string }) => {
-    const p = JSON.parse((await run(['rex', 'block', 'call', '-s', SESSION, '-b', b.block_id, 'process'])) || '{}')
+    const p = JSON.parse((await run(['rex', 'block', 'call', ...s, '-b', b.block_id, 'process'])) || '{}')
     if (p.foreground?.pid && b.label && b.label !== 'shell') out.set(p.foreground.pid, b.label)
   }))
   return out
@@ -111,23 +111,27 @@ async function refresh() {
 }
 
 function render() {
-  const width = Math.min(process.stdout.columns || 100, 140)
+  const width = Math.min(process.stdout.columns || 80, 80)
   const inner = width - 4
   const out: string[] = []
+  const pct = (p: number) => `${tone(p)}${String(Math.round(p)).padStart(3)}%${c.reset}`
   const limit = (label: string, l?: Limit) =>
-    l ? `${pad(label, 9)}${bar(l.used_percentage, 40)}  ${tone(l.used_percentage)}${String(Math.round(l.used_percentage)).padStart(3)} %${c.reset}  ${c.dim}resets ${resetAt(l.resets_at)}${c.reset}`
-      : `${pad(label, 9)}${c.dim}not known yet${c.reset}`
-  out.push(...box('Account limits', c.cyan, '', [limit('Session', limits.five), limit('Week', limits.seven)], width), '')
+    l ? `${pad(label, 8)}${bar(l.used_percentage, Math.max(6, inner - 26))} ${pct(l.used_percentage)}  ${c.dim}↻ ${resetAt(l.resets_at)}${c.reset}`
+      : `${pad(label, 8)}${c.dim}not known yet${c.reset}`
+  out.push(...box('Limits', c.cyan, '', [limit('Session', limits.five), limit('Week', limits.seven)], width), '')
 
   const total = rows.reduce((sum, r) => sum + r.cost, 0)
-  const nameWidth = Math.max(12, inner - 52)
+  const withBar = inner >= 60
+  const nameWidth = Math.max(8, inner - (withBar ? 36 : 29))
   const lines = rows.map((r) => {
     const state = r.status === 'busy' ? `${c.yellow}●${c.reset}` : `${c.dim}○${c.reset}`
-    const model = `${c.dim}${clip(`${r.model}${r.effort ? ` ${r.effort}` : ''}`, 16)}${c.reset}`
-    return `${state} ${pad(clip(r.name, nameWidth), nameWidth)}  ${pad(model, 16)}  ${bar(r.context, 10)} ${tone(r.context)}${String(r.context).padStart(3)} %${c.reset}  ${c.dim}$${r.cost.toFixed(2).padStart(6)}${c.reset}`
+    const model = clip(`${r.model.replace(/^(\w)\w*\s+/, '$1')}${r.effort ? ` ${r.effort}` : ''}`, 11)
+    const cost = (r.cost >= 100 ? `$${Math.round(r.cost)}` : `$${r.cost.toFixed(2)}`).padStart(6)
+    const context = `${withBar ? `${bar(r.context, 6)} ` : ''}${pct(r.context)}`
+    return `${state} ${pad(clip(r.name, nameWidth), nameWidth)}  ${c.dim}${pad(model, 11)}${c.reset}  ${context}  ${c.dim}${cost}${c.reset}`
   })
-  out.push(...box('Sessions', c.blue, `${rows.length} · $${total.toFixed(2)}`, lines.length ? lines : [`${c.dim}No Claude session running.${c.reset}`], width), '')
-  out.push(` ${c.dim}● working  ○ idle · context · session cost · updated ${new Date().toTimeString().slice(0, 8)} · q quit${c.reset}`)
+  out.push(...box('Sessions', c.blue, `${rows.length} · $${Math.round(total)}`, lines.length ? lines : [`${c.dim}No Claude session running.${c.reset}`], width), '')
+  out.push(`${c.dim}● working ○ idle · ${new Date().toTimeString().slice(0, 5)} · q${c.reset}`)
   process.stdout.write(`\x1b[H\x1b[2J${out.join('\n')}`)
 }
 

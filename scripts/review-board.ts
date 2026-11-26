@@ -7,7 +7,7 @@ const arg = (name: string) => {
   return i > 0 ? process.argv[i + 1] : undefined
 }
 const REPO = arg('repo')
-const SESSION = process.env.REX_SESSION
+const S = process.env.REX_SESSION ? ['-s', process.env.REX_SESSION] : []
 const GH = Bun.which('gh') ?? '/opt/homebrew/bin/gh'
 const REFRESH_MS = Number(arg('minutes') ?? 5) * 60_000
 
@@ -79,19 +79,21 @@ const ciMark = (ci: string | null) =>
 
 function box(title: string, color: string, count: string, lines: string[], width: number) {
   const inner = width - 4
-  const head = `${color}┌ ${c.bold}${title}${c.reset}${color} ${'─'.repeat(Math.max(1, width - visible(title) - visible(count) - 6))} ${c.reset}${count}${color} ┐${c.reset}`
+  const head = `${color}┌ ${c.bold}${title}${c.reset}${color} ${count ? `${'─'.repeat(Math.max(1, width - visible(title) - visible(count) - 6))} ${c.reset}${count}${color} ` : '─'.repeat(Math.max(1, width - visible(title) - 4))}┐${c.reset}`
   const body = lines.map((l) => `${color}│${c.reset} ${l}${' '.repeat(Math.max(0, inner - visible(l)))} ${color}│${c.reset}`)
   return [head, ...body, `${color}└${'─'.repeat(width - 2)}┘${c.reset}`]
 }
+const kilo = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n))
 
-function row(pr: Pr, selected: boolean, inner: number, who: string, sub: string) {
-  const right = [who, age(pr.hours), `${c.green}+${pr.additions}${c.reset} ${c.red}−${pr.deletions}${c.reset}`].filter(Boolean).join(`${c.dim} · ${c.reset}`)
-  const lead = `${selected ? `${c.orange}›${c.reset}` : ' '} ${ciMark(pr.ci)} ${link(pr.url, `${c.bold}#${pr.number}${c.reset}`)}  `
+function row(pr: Pr, selected: boolean, width: number, who: string, sub: string) {
+  const size = `${c.green}+${kilo(pr.additions)}${c.reset} ${c.red}−${kilo(pr.deletions)}${c.reset}`
+  const right = [clip(who, 10), age(pr.hours), size].filter(Boolean).join(' ')
+  const lead = `${selected ? `${c.orange}›${c.reset}` : ' '} ${ciMark(pr.ci)} ${link(pr.url, `${c.bold}#${pr.number}${c.reset}`)} `
   const tail = `${c.dim}${right}${c.reset}`
-  const room = inner - visible(lead) - visible(tail) - 2
+  const room = width - visible(lead) - visible(tail) - 1
   const title = clip(pr.title, room)
-  const line = `${lead}${selected ? c.bold : ''}${title}${c.reset}${' '.repeat(Math.max(2, room - title.length + 2))}${tail}`
-  return sub ? [line, `      ${c.dim}${clip(sub, inner - 6)}${c.reset}`] : [line]
+  const line = `${lead}${selected ? c.bold : ''}${title}${c.reset}${' '.repeat(Math.max(1, room - title.length + 1))}${tail}`
+  return sub ? [line, `    ${c.dim}${clip(sub, width - 4)}${c.reset}`] : [line]
 }
 
 type Group = { title: string; color: string; prs: Pr[]; who: (p: Pr) => string; sub: (p: Pr) => string }
@@ -137,7 +139,7 @@ const entries = () => sections().flatMap((s) => groupsOf(s).flatMap((g) => g.prs
 const selected = () => entries()[cursor]?.pr
 
 function render() {
-  const width = Math.min(process.stdout.columns || 100, 140)
+  const width = Math.min(process.stdout.columns || 80, 80)
   const inner = width - 4
   const out: string[] = []
   let i = 0
@@ -154,9 +156,9 @@ function render() {
       out.push(...box(first.title, c.green, '0', [`${c.dim}${TABS[s].empty}${c.reset}`], width), '')
     }
   })
-  if (notice) out.push(` ${notice}`, '')
-  const enter = entries()[cursor]?.section === 1 ? 'open' : 'review'
-  out.push(` ${c.dim}${loading ? 'updating…' : `updated ${updated}`}  ·${c.reset}  ${c.dim}↑↓${c.reset} select  ${c.dim}enter${c.reset} ${enter}  ${c.dim}o${c.reset} open  ${c.dim}r${c.reset} refresh  ${c.dim}q${c.reset} quit`)
+  if (notice) out.push(notice, '')
+  const keys = entries()[cursor]?.section === 1 ? "⏎ o open" : "⏎ review · o open"
+  out.push(`${c.dim}${loading ? '…' : updated} · ↑↓ · ${keys} · r · q${c.reset}`)
   process.stdout.write(`\x1b[H\x1b[2J${out.join('\n')}`)
 }
 
@@ -176,10 +178,10 @@ async function refresh() {
 }
 
 async function claudePane() {
-  if (!REPO || !SESSION) return undefined
-  const blocks = JSON.parse(await run(['rex', 'block', 'ls', '-s', SESSION, '--json'])).blocks as { block_id: string }[]
+  if (!REPO) return undefined
+  const blocks = JSON.parse(await run(['rex', 'block', 'ls', ...S, '--json'])).blocks as { block_id: string }[]
   for (const b of blocks) {
-    const p = JSON.parse(await run(['rex', 'block', 'call', '-s', SESSION, '-b', b.block_id, 'process']).catch(() => '{}'))
+    const p = JSON.parse(await run(['rex', 'block', 'call', ...S, '-b', b.block_id, 'process']).catch(() => '{}'))
     if (p.foreground?.argv0?.endsWith('claude') && p.foreground.cwd === REPO) return b.block_id
   }
 }
@@ -187,14 +189,14 @@ async function claudePane() {
 async function review(pr = selected()) {
   if (!pr) return
   const TARGET = await claudePane()
-  if (!TARGET || !SESSION) {
+  if (!TARGET) {
     notice = `${c.yellow}No Claude session in ${REPO ?? '--repo'}: run /wt-review ${pr.number} yourself.${c.reset}`
     return render()
   }
   try {
-    await run(['rex', 'send', '-s', SESSION, '-b', TARGET, `/wt-review ${pr.number}`])
-    await run(['rex', 'send-key', '-s', SESSION, '-b', TARGET, 'enter'])
-    await run(['rex', 'focus', '-s', SESSION, TARGET]).catch(() => {})
+    await run(['rex', 'send', ...S, '-b', TARGET, `/wt-review ${pr.number}`])
+    await run(['rex', 'send-key', ...S, '-b', TARGET, 'enter'])
+    await run(['rex', 'focus', ...S, TARGET]).catch(() => {})
     notice = `${c.green}/wt-review ${pr.number} sent to your session.${c.reset}`
   } catch (e) {
     notice = `${c.red}Could not send: ${(e as Error).message}${c.reset}`

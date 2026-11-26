@@ -2,7 +2,9 @@
 # Rex pane in <dir>, beside this session, running `claude -n <name>` and labelled --label (default <name>).
 # wt-pane.sh --close <dir>: closes every pane whose program runs in <dir>, this one excepted. The Rex side is wt-pane.lua.
 # zsh, not bash: bash 3.2's printf %q turns multibyte text into invalid UTF-8.
-[ -n "$REX_SESSION" ] && command -v rex >/dev/null || { echo "wt-pane.sh: needs a Rex terminal (REX_SESSION unset)" >&2; exit 1; }
+# A pane rex-resume brings back after a restart has REX_BLOCK but no REX_SESSION: ask Rex which session holds it.
+[ -n "$REX_SESSION" ] || export REX_SESSION="$(rex whoami --json 2>/dev/null | jq -r '.session_id // empty')"
+[ -n "$REX_SESSION" ] && command -v rex >/dev/null || { echo "wt-pane.sh: needs a Rex terminal (no Rex session found)" >&2; exit 1; }
 LUA="${0:A:h}/wt-pane.lua"
 if [ "$1" = "--close" ]; then
   D="${2%/}"; exec rex do "$LUA" close="${D:A}"

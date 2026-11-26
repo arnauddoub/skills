@@ -1,7 +1,72 @@
 require("extensions.rex-resume")
 
 rex.bind("shift+enter", "pane.send_key", { key = "ctrl+j" })
-rex.bind("shift+cmd+=", "pane.balance")
+-- Even panes, except the boards beside them (Reviews, Usage): their column gets BOARD_WEIGHT of a normal one.
+local BOARDS = { ["Reviews"] = true, ["Memory"] = true, ["Usage Claude"] = true }
+local BOARD_WEIGHT = 0.52
+
+local function first_leaf(n)
+  while n.split do n = n.split.before end
+  return n.block_id
+end
+
+local function weights(n, boards)
+  if n.block_id then return boards[n.block_id] and BOARD_WEIGHT or 1, 1 end
+  local s = n.split
+  local bw, bh = weights(s.before, boards)
+  local aw, ah = weights(s.after, boards)
+  if s.direction == "horizontal" then return bw + aw, math.max(bh, ah) end
+  return math.max(bw, aw), bh + ah
+end
+
+local function borders(n, boards, out)
+  if not n.split then return out end
+  local s = n.split
+  local bw, bh = weights(s.before, boards)
+  local aw, ah = weights(s.after, boards)
+  local ratio = s.direction == "horizontal" and bw / (bw + aw) or bh / (bh + ah)
+  table.insert(out, { direction = s.direction, before_block_id = first_leaf(s.before), after_block_id = first_leaf(s.after), ratio = ratio })
+  borders(s.before, boards, out)
+  return borders(s.after, boards, out)
+end
+
+local function contains(n, id)
+  if n.block_id then return n.block_id == id end
+  return contains(n.split.before, id) or contains(n.split.after, id)
+end
+
+rex.action{
+  name = "balance_panes",
+  title = "Balance the Panes, Boards Narrower",
+  keywords = "balance equal even resize panes reviews usage",
+  args = { dry = "boolean?" },
+  run = function(ctx, args)
+    local session = ctx.session_id or rex.session_id
+    local view, err = rex.call("session.view", { session_id = session })
+    if err ~= nil then error(err, 0) end
+    local boards = {}
+    for _, b in ipairs((rex.session.list_blocks{} or {}).blocks or {}) do
+      if BOARDS[b.label or ""] then boards[b.block_id] = true end
+    end
+    for _, w in ipairs(view.windows) do
+      for _, layer in ipairs(w.layers or {}) do
+        local root = layer.kind == "tiled" and layer.layout
+        if root and (ctx.block_id == nil or contains(root, ctx.block_id)) then
+          local out = borders(root, boards, {})
+          if args.dry then return { window = w.label, borders = out } end
+          for _, b in ipairs(out) do
+            b.session_id = session
+            local _, e = rex.call("session.resize_pane", b)
+            if e ~= nil then error(e, 0) end
+          end
+          return { window = w.label, borders = #out }
+        end
+      end
+    end
+    error("no tiled window holds the focused pane", 0)
+  end,
+}
+rex.bind("shift+cmd+=", "balance_panes")
 
 
 local GH = "/opt/homebrew/bin/gh"
